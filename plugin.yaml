@@ -1,0 +1,22 @@
+name: agentmail-mailbox
+label: AgentMail Mailbox
+kind: platform
+version: 0.1.2
+description: >
+  Outbound-only AgentMail WebSocket mailbox adapter for Hermes gateway experiments.
+  It subscribes to inbound AgentMail events, batches queued notifications into a
+  single mailbox turn, paces dispatches so mailbox work is not interrupted by
+  unsafe global busy-mode settings, and feeds a single long-lived mailbox session
+  with minimal "new mail arrived" notifications instead of exposing a public
+  webhook port.
+author: Hermes Agent experiment
+requires_env:
+  - name: AGENTMAIL_API_KEY
+    description: AgentMail API key used for WebSocket event subscription and MCP tools
+    prompt: AgentMail API key
+    password: true
+  - name: AGENTMAIL_INBOX
+    description: Comma-separated AgentMail inbox IDs / email addresses to watch
+    prompt: AgentMail inbox IDs
+    password: false
+hooks: []
