@@ -17,7 +17,8 @@ Set `AGENTMAIL_API_KEY` and `AGENTMAIL_INBOX` in the target Hermes environment, 
 - Plugin name: `agentmail-mailbox`
 - Platform name: `agentmail_mailbox`
 - Required env: `AGENTMAIL_API_KEY`, `AGENTMAIL_INBOX` or platform `extra.inbox_ids`
-- Optional env/config: `AGENTMAIL_MAILBOX_SESSION`, `AGENTMAIL_MAILBOX_NOTIFICATION_MIN_INTERVAL_SECONDS`, `AGENTMAIL_MAILBOX_NOTIFICATION_BATCH_WINDOW_SECONDS`
+- Optional env/config: `AGENTMAIL_MAILBOX_SESSION` to override the stable session id, `AGENTMAIL_MAILBOX_NOTIFICATION_MIN_INTERVAL_SECONDS`, `AGENTMAIL_MAILBOX_NOTIFICATION_BATCH_WINDOW_SECONDS`
+- Default session id: `agentmail-mailbox:<first-inbox-local-part>` when no explicit session is set
 - Watched event classes: regular, spam, unauthenticated, and blocked received-mail events
 - Bundled skill guidance: `skills/email/agentmail-mailbox-operator` copied into `$HERMES_HOME/skills` on startup if missing
 

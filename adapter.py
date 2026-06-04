@@ -14,6 +14,7 @@ import json
 import logging
 import os
 import random
+import re
 import shutil
 import time
 import urllib.parse
@@ -68,7 +69,7 @@ class AgentMailMailboxAdapter(BasePlatformAdapter):
         self._event_types = _csv_or_list(extra.get("event_types")) or list(DEFAULT_EVENT_TYPES)
         self._session_chat_id = str(
             extra.get("session_chat_id")
-            or os.getenv("AGENTMAIL_MAILBOX_SESSION", "agentmail-mailbox")
+            or _default_session_chat_id(self._inbox_ids)
         )
         self._session_name = str(extra.get("session_name") or "AgentMail mailbox")
         self._auto_skill = extra.get("auto_skill") or "agentmail-mailbox-operator"
@@ -498,6 +499,23 @@ def _parse_ts(raw: Any) -> datetime:
     return datetime.now(tz=timezone.utc)
 
 
+def _default_session_chat_id(inboxes: List[str]) -> str:
+    explicit = os.getenv("AGENTMAIL_MAILBOX_SESSION", "").strip()
+    if explicit:
+        return explicit
+    if inboxes:
+        local = str(inboxes[0]).split("@", 1)[0]
+        suffix = re.sub(r"[^a-z0-9_.-]+", "-", local.lower()).strip("-._")
+        if suffix:
+            return f"agentmail-mailbox:{suffix}"
+    fly_app = os.getenv("FLY_APP_NAME", "").strip().lower()
+    if fly_app:
+        suffix = re.sub(r"[^a-z0-9_.-]+", "-", fly_app).strip("-._")
+        if suffix:
+            return f"agentmail-mailbox:{suffix}"
+    return "agentmail-mailbox"
+
+
 def _redacted_ws_error(data: Dict[str, Any]) -> Dict[str, Any]:
     redacted: Dict[str, Any] = {}
     for key, value in data.items():
@@ -607,7 +625,7 @@ def _env_enablement() -> dict | None:
     return {
         "inbox_ids": inboxes,
         "event_types": list(DEFAULT_EVENT_TYPES),
-        "session_chat_id": os.getenv("AGENTMAIL_MAILBOX_SESSION", "agentmail-mailbox"),
+        "session_chat_id": _default_session_chat_id(inboxes),
         "auto_skill": "agentmail-mailbox-operator",
         "noop_send": True,
         "notification_min_interval_seconds": DEFAULT_NOTIFICATION_MIN_INTERVAL_SECONDS,

@@ -1,7 +1,7 @@
 ---
 name: agentmail-mailbox-operator
 description: Operate a long-running AgentMail mailbox session from minimal WebSocket notifications using AgentMail MCP tools.
-version: 0.1.2
+version: 0.1.3
 author: Hermes Agent
 license: MIT
 platforms: [linux]
