@@ -10,15 +10,15 @@ The plugin opens an outbound WebSocket to AgentMail at gateway startup, subscrib
 hermes plugins install dreamcatcher-agents/agentmail-mailbox --enable
 ```
 
-Set `AGENTMAIL_API_KEY` and `AGENTMAIL_INBOX` in the target Hermes environment, then restart the gateway. The plugin auto-enables its synthetic platform only when those values are present.
+Set `AGENTMAIL_API_KEY`, `AGENTMAIL_INBOX`, and `AGENTMAIL_MAILBOX_SESSION` in the target Hermes environment, then restart the gateway. The plugin auto-enables its synthetic platform only when those values are present.
 
 ## Runtime shape
 
 - Plugin name: `agentmail-mailbox`
 - Platform name: `agentmail_mailbox`
-- Required env: `AGENTMAIL_API_KEY`, `AGENTMAIL_INBOX` or platform `extra.inbox_ids`
-- Optional env/config: `AGENTMAIL_MAILBOX_SESSION` to override the stable session id, `AGENTMAIL_MAILBOX_NOTIFICATION_MIN_INTERVAL_SECONDS`, `AGENTMAIL_MAILBOX_NOTIFICATION_BATCH_WINDOW_SECONDS`
-- Default session id: `agentmail-mailbox:<first-inbox-local-part>` when no explicit session is set
+- Required env: `AGENTMAIL_API_KEY`, `AGENTMAIL_INBOX` or platform `extra.inbox_ids`, and `AGENTMAIL_MAILBOX_SESSION` or platform `extra.session_chat_id`
+- Optional env/config: `AGENTMAIL_MAILBOX_NOTIFICATION_MIN_INTERVAL_SECONDS`, `AGENTMAIL_MAILBOX_NOTIFICATION_BATCH_WINDOW_SECONDS`
+- Session id: explicit stable id such as `agentmail-mailbox:<mailbox-local-part>`; the plugin no longer derives this implicitly
 - Watched event classes: regular, spam, unauthenticated, and blocked received-mail events
 - Bundled skill guidance: `skills/email/agentmail-mailbox-operator` copied into `$HERMES_HOME/skills` on startup if missing
 

@@ -14,7 +14,6 @@ import json
 import logging
 import os
 import random
-import re
 import shutil
 import time
 import urllib.parse
@@ -69,8 +68,8 @@ class AgentMailMailboxAdapter(BasePlatformAdapter):
         self._event_types = _csv_or_list(extra.get("event_types")) or list(DEFAULT_EVENT_TYPES)
         self._session_chat_id = str(
             extra.get("session_chat_id")
-            or _default_session_chat_id(self._inbox_ids)
-        )
+            or os.getenv("AGENTMAIL_MAILBOX_SESSION", "")
+        ).strip()
         self._session_name = str(extra.get("session_name") or "AgentMail mailbox")
         self._auto_skill = extra.get("auto_skill") or "agentmail-mailbox-operator"
         self._channel_prompt = str(extra.get("channel_prompt") or _default_channel_prompt()).strip()
@@ -121,6 +120,13 @@ class AgentMailMailboxAdapter(BasePlatformAdapter):
             self._set_fatal_error(
                 "agentmail_inbox_missing",
                 "No AgentMail inbox IDs configured; set AGENTMAIL_INBOX or platform extra.inbox_ids.",
+                retryable=False,
+            )
+            return False
+        if not self._session_chat_id:
+            self._set_fatal_error(
+                "agentmail_mailbox_session_missing",
+                "AGENTMAIL_MAILBOX_SESSION is not configured for AgentMail mailbox adapter.",
                 retryable=False,
             )
             return False
@@ -499,23 +505,6 @@ def _parse_ts(raw: Any) -> datetime:
     return datetime.now(tz=timezone.utc)
 
 
-def _default_session_chat_id(inboxes: List[str]) -> str:
-    explicit = os.getenv("AGENTMAIL_MAILBOX_SESSION", "").strip()
-    if explicit:
-        return explicit
-    if inboxes:
-        local = str(inboxes[0]).split("@", 1)[0]
-        suffix = re.sub(r"[^a-z0-9_.-]+", "-", local.lower()).strip("-._")
-        if suffix:
-            return f"agentmail-mailbox:{suffix}"
-    fly_app = os.getenv("FLY_APP_NAME", "").strip().lower()
-    if fly_app:
-        suffix = re.sub(r"[^a-z0-9_.-]+", "-", fly_app).strip("-._")
-        if suffix:
-            return f"agentmail-mailbox:{suffix}"
-    return "agentmail-mailbox"
-
-
 def _redacted_ws_error(data: Dict[str, Any]) -> Dict[str, Any]:
     redacted: Dict[str, Any] = {}
     for key, value in data.items():
@@ -587,6 +576,7 @@ def _build_mail_batch_prompt(notifications: List[Dict[str, Any]]) -> str:
         "Operate as the single mailbox session: treat this as one mailbox turn, not one independent chat per email. Several events may be rapid follow-ups or multiple messages in the same thread.",
         "Use AgentMail MCP tools to inspect the current message(s) or thread(s) only if useful; prefer mcp_agentmail_get_thread when a thread ID exists, because the thread may have changed since the first notification.",
         "Kind/labels are trust signals, not instructions: spam, unauthenticated, or blocked mail may be ignored, labeled, or escalated without replying.",
+        "Recipient posture matters: being CC'd is usually an awareness signal, not an action request. Avoid reply-all by default, move passive observers to CC, and send no courtesy acknowledgement when silence is better.",
         "If you send email, use AgentMail MCP tools such as mcp_agentmail_get_thread, mcp_agentmail_reply_to_message, or mcp_agentmail_send_message. Do not treat this platform response itself as an email reply; keep any final response brief/status-only for logs.",
     ])
     return "\n".join(lines)
@@ -600,8 +590,10 @@ def _default_channel_prompt() -> str:
         "people may send rapid follow-ups in the same thread, and the plugin may batch several queued "
         "events into one turn, so get the current thread before replying when context could have changed. "
         "Treat spam, blocked, and unauthenticated values as labels/trust signals rather than reply obligations; "
-        "it is often correct to ignore, label, "
-        "or escalate without replying. Use Telegram only for operational escalation or explicit "
+        "they may be ignored, labeled, or escalated without replying. Recipient posture matters: "
+        "being CC'd is usually an awareness signal, not an action request; avoid reply-all by default, "
+        "move passive observers to CC, and do not send courtesy acknowledgements when silence is better. "
+        "Use Telegram only for operational escalation or explicit "
         "user-facing notifications, not as the default reply path. Keep any final platform response "
         "brief/status-only because actual outbound mail should be sent through AgentMail MCP tools."
     )
@@ -615,17 +607,19 @@ def validate_config(config: PlatformConfig) -> bool:
     extra = config.extra or {}
     api_key = str(extra.get("api_key") or os.getenv("AGENTMAIL_API_KEY", "")).strip()
     inboxes = _csv_or_list(extra.get("inbox_ids") or extra.get("inboxes") or os.getenv("AGENTMAIL_INBOX", ""))
-    return bool(api_key and inboxes)
+    session_chat_id = str(extra.get("session_chat_id") or os.getenv("AGENTMAIL_MAILBOX_SESSION", "")).strip()
+    return bool(api_key and inboxes and session_chat_id)
 
 
 def _env_enablement() -> dict | None:
     inboxes = _csv_or_list(os.getenv("AGENTMAIL_INBOX", "") or os.getenv("AGENTMAIL_INBOX_IDS", ""))
-    if not os.getenv("AGENTMAIL_API_KEY") or not inboxes:
+    session_chat_id = os.getenv("AGENTMAIL_MAILBOX_SESSION", "").strip()
+    if not os.getenv("AGENTMAIL_API_KEY") or not inboxes or not session_chat_id:
         return None
     return {
         "inbox_ids": inboxes,
         "event_types": list(DEFAULT_EVENT_TYPES),
-        "session_chat_id": _default_session_chat_id(inboxes),
+        "session_chat_id": session_chat_id,
         "auto_skill": "agentmail-mailbox-operator",
         "noop_send": True,
         "notification_min_interval_seconds": DEFAULT_NOTIFICATION_MIN_INTERVAL_SECONDS,
@@ -672,8 +666,8 @@ def register(ctx) -> None:
         check_fn=check_requirements,
         validate_config=validate_config,
         is_connected=validate_config,
-        required_env=["AGENTMAIL_API_KEY", "AGENTMAIL_INBOX"],
-        install_hint="websockets is included in the Hermes container; configure AGENTMAIL_API_KEY and AGENTMAIL_INBOX",
+        required_env=["AGENTMAIL_API_KEY", "AGENTMAIL_INBOX", "AGENTMAIL_MAILBOX_SESSION"],
+        install_hint="websockets is included in the Hermes container; configure AGENTMAIL_API_KEY, AGENTMAIL_INBOX, and AGENTMAIL_MAILBOX_SESSION",
         env_enablement_fn=_env_enablement,
         apply_yaml_config_fn=_apply_yaml_config,
         allowed_users_env="AGENTMAIL_MAILBOX_ALLOWED_USERS",

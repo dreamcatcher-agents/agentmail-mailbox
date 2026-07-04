@@ -1,7 +1,7 @@
 name: agentmail-mailbox
 label: AgentMail Mailbox
 kind: platform
-version: 0.1.3
+version: 0.1.4
 description: >
   Outbound-only AgentMail WebSocket mailbox adapter for Hermes gateway experiments.
   It subscribes to inbound AgentMail events, batches queued notifications into a
@@ -18,5 +18,9 @@ requires_env:
   - name: AGENTMAIL_INBOX
     description: Comma-separated AgentMail inbox IDs / email addresses to watch
     prompt: AgentMail inbox IDs
+    password: false
+  - name: AGENTMAIL_MAILBOX_SESSION
+    description: Stable Hermes synthetic session id for this mailbox, e.g. agentmail-mailbox:harriet-mckenzie
+    prompt: AgentMail mailbox session id
     password: false
 hooks: []

@@ -16,7 +16,7 @@ Use this reference when building or operating a Hermes AgentMail mailbox agent t
 
 - A platform adapter can dispatch notifications to a fixed `session_chat_id` to preserve mailbox-wide continuity.
 - Hermes profiles are whole-Hermes-home/gateway boundaries. Running only one platform plugin/session under another profile inside an existing gateway is not a neat per-plugin switch; use a dedicated agent/app for profile isolation or make the plugin behavior safe under the active gateway profile.
-- Configure the platform/session so one mailbox maps to one long-running session. If no explicit `session_chat_id` or `AGENTMAIL_MAILBOX_SESSION` is set, plugin v0.1.3+ derives `agentmail-mailbox:<first-inbox-local-part>` so native env-only installs do not collapse multiple apps into the same generic session name.
+- Configure the platform/session so one mailbox maps to one long-running session. Plugin v0.1.4+ requires an explicit `AGENTMAIL_MAILBOX_SESSION` or platform `extra.session_chat_id`; do not derive the stable synthetic session from event id, message id, or thread id.
 - If the platform is not a user-facing chat transport, implement/send-configure a no-op `send()` path and log suppression clearly.
 - Ensure platform authorization/pairing state is compatible with synthetic platform users. If the inbound source is already authenticated by AgentMail API/WebSocket credentials, a scoped allow-all/bypass for that platform may be appropriate; keep it platform-specific.
 - For Fly experiments that must avoid public ingress, remove machine services/ports and verify the machine still runs the gateway with `services` empty/null.
