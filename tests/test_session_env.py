@@ -1,3 +1,4 @@
+import inspect
 from pathlib import Path
 
 from gateway.config import PlatformConfig
@@ -57,6 +58,14 @@ def test_validate_config_accepts_platform_session_override(monkeypatch):
     cfg = PlatformConfig(extra={"session_chat_id": "agentmail-mailbox:persona"})
 
     assert adapter.validate_config(cfg) is True
+
+
+def test_connect_accepts_gateway_reconnect_contract():
+    signature = inspect.signature(adapter.AgentMailMailboxAdapter.connect)
+
+    parameter = signature.parameters["is_reconnect"]
+    assert parameter.kind is inspect.Parameter.KEYWORD_ONLY
+    assert parameter.default is False
 
 
 def test_default_prompts_include_cc_and_reply_storm_etiquette():

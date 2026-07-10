@@ -101,7 +101,12 @@ class AgentMailMailboxAdapter(BasePlatformAdapter):
         # adapter.  There is no end-user identity for gateway allowlists to check.
         return True
 
-    async def connect(self) -> bool:
+    async def connect(self, *, is_reconnect: bool = False) -> bool:
+        # Hermes v0.18+ forwards this lifecycle flag to every platform
+        # adapter. AgentMail owns its own reconnect loop and therefore has no
+        # gateway-side queue policy to vary here, but accepting the keyword is
+        # required by BasePlatformAdapter.connect's contract.
+        del is_reconnect
         if not WEBSOCKETS_AVAILABLE:
             self._set_fatal_error(
                 "agentmail_websockets_missing",

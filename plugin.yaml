@@ -1,7 +1,7 @@
 name: agentmail-mailbox
 label: AgentMail Mailbox
 kind: platform
-version: 0.1.4
+version: 0.1.5
 description: >
   Outbound-only AgentMail WebSocket mailbox adapter for Hermes gateway experiments.
   It subscribes to inbound AgentMail events, batches queued notifications into a
